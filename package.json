@@ -44,14 +44,15 @@
     "node": ">=18"
   },
   "devDependencies": {
-    "@resvg/resvg-js": "^2.6.2",
     "@fastify/deepmerge": "^3.2.1",
+    "@resvg/resvg-js": "^2.6.2",
     "@types/benchmark": "^2.1.5",
     "@types/jest": "^29.5.12",
     "@types/node": "^20.14.2",
     "benchmark": "^2.1.4",
     "deep-merge": "^1.0.0",
     "deepmerge": "^4.3.1",
+    "esbuild": "^0.25.12",
     "jest": "^29.7.0",
     "ts-deepmerge": "^8.0.0",
     "ts-jest": "^29.2.3",

@@ -7,7 +7,8 @@ const path = require("path");
 const Benchmark = require("benchmark");
 const { manyObjects } = require("./fixtures.js");
 const { implementations } = require("./lib.js");
-const { generateChart, generateBenchmarkSvg } = require("./generate-chart.js");
+const { generateChart, generateBenchmarkSvg, generateBundleSizeSvg } = require("./generate-chart.js");
+const { measureAllBundleSizes, formatBytes } = require("./measure-size.js");
 
 /** @type {number[]} */
 const OBJECT_COUNTS = [5, 10, 25, 50, 100];
@@ -77,6 +78,12 @@ async function main() {
     runs.push(await benchObjectCount(count));
   }
 
+  console.log("\n── Bundle size (minified + gzip) ──");
+  const bundleSize = await measureAllBundleSizes(implementations);
+  for (const lib of bundleSize.libraries) {
+    console.log(`  ${lib.label}: ${formatBytes(lib.minified)} minified, ${formatBytes(lib.gzip)} gzip`);
+  }
+
   const results = {
     meta: {
       startedAt,
@@ -86,6 +93,7 @@ async function main() {
       platform: process.platform,
       note: "Throughput (ops/sec) on identical nested payloads; outputs are not equivalent.",
     },
+    bundleSize,
     runs,
     series: implementations.map((impl) => ({
       id: impl.id,
@@ -109,12 +117,21 @@ async function main() {
   const svgPath = generateBenchmarkSvg(results);
   console.log(`Wrote ${svgPath}`);
 
+  const sizeSvgPath = generateBundleSizeSvg(results);
+  console.log(`Wrote ${sizeSvgPath}`);
+
   try {
     const { Resvg } = require("@resvg/resvg-js");
-    const pngPath = path.join(path.dirname(svgPath), "benchmark.png");
-    const resvg = new Resvg(fs.readFileSync(svgPath), { fitTo: { mode: "width", value: 880 } });
-    fs.writeFileSync(pngPath, resvg.render().asPng());
-    console.log(`Wrote ${pngPath}`);
+    const docsDir = path.dirname(svgPath);
+    for (const [name, file] of [
+      ["benchmark.png", svgPath],
+      ["benchmark-size.png", sizeSvgPath],
+    ]) {
+      const pngPath = path.join(docsDir, name);
+      const resvg = new Resvg(fs.readFileSync(file), { fitTo: { mode: "width", value: 880 } });
+      fs.writeFileSync(pngPath, resvg.render().asPng());
+      console.log(`Wrote ${pngPath}`);
+    }
   } catch (err) {
     console.warn("Skipping PNG export (install @resvg/resvg-js):", err.message);
   }

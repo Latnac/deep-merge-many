@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 286" width="880" height="286">
+  <rect width="100%" height="100%" fill="#fafafa"/>
+  <text x="440" y="24" text-anchor="middle" font-size="16" font-weight="600" fill="#171717">Bundled library size (gzip)</text>
+  <rect x="151.60000000000002" y="43.5" width="14" height="3" fill="#2563eb" rx="1"/>
+  <text x="171.60000000000002" y="45" dominant-baseline="middle" font-size="11" fill="#171717" font-weight="600">deep-merge-many</text>
+  <rect x="284.6" y="43.5" width="14" height="3" fill="#dc2626" rx="1"/>
+  <text x="304.6" y="45" dominant-baseline="middle" font-size="11" fill="#171717" font-weight="400">@fastify/deepmerge</text>
+  <rect x="436.20000000000005" y="43.5" width="14" height="3" fill="#16a34a" rx="1"/>
+  <text x="456.20000000000005" y="45" dominant-baseline="middle" font-size="11" fill="#171717" font-weight="400">ts-deepmerge</text>
+  <rect x="550.6" y="43.5" width="14" height="3" fill="#ca8a04" rx="1"/>
+  <text x="570.6" y="45" dominant-baseline="middle" font-size="11" fill="#171717" font-weight="400">deepmerge</text>
+  <rect x="646.4000000000001" y="43.5" width="14" height="3" fill="#9333ea" rx="1"/>
+  <text x="666.4000000000001" y="45" dominant-baseline="middle" font-size="11" fill="#171717" font-weight="400">deep-merge</text>
+  <text x="190" y="92" text-anchor="end" dominant-baseline="middle" font-size="12" fill="#171717" font-weight="600">deep-merge-many</text>
+        <rect x="200" y="83" width="274.7" height="18" fill="#2563eb" rx="2" stroke="#2563eb" stroke-width="2"/>
+        <text x="480.71383975026015" y="92" dominant-baseline="middle" font-size="11" fill="#525252">440 B gzip</text><text x="190" y="128" text-anchor="end" dominant-baseline="middle" font-size="12" fill="#171717" font-weight="400">@fastify/deepmerge</text>
+        <rect x="200" y="119" width="600.0" height="18" fill="#dc2626" rx="2" stroke="#dc2626" stroke-width="0"/>
+        <text x="806" y="128" dominant-baseline="middle" font-size="11" fill="#525252">961 B gzip</text><text x="190" y="164" text-anchor="end" dominant-baseline="middle" font-size="12" fill="#171717" font-weight="400">ts-deepmerge</text>
+        <rect x="200" y="155" width="416.4" height="18" fill="#16a34a" rx="2" stroke="#16a34a" stroke-width="0"/>
+        <text x="622.4412070759626" y="164" dominant-baseline="middle" font-size="11" fill="#525252">667 B gzip</text><text x="190" y="200" text-anchor="end" dominant-baseline="middle" font-size="12" fill="#171717" font-weight="400">deepmerge</text>
+        <rect x="200" y="191" width="471.4" height="18" fill="#ca8a04" rx="2" stroke="#ca8a04" stroke-width="0"/>
+        <text x="677.3839750260146" y="200" dominant-baseline="middle" font-size="11" fill="#525252">755 B gzip</text><text x="190" y="236" text-anchor="end" dominant-baseline="middle" font-size="12" fill="#171717" font-weight="400">deep-merge</text>
+        <rect x="200" y="227" width="230.4" height="18" fill="#9333ea" rx="2" stroke="#9333ea" stroke-width="0"/>
+        <text x="436.3850156087409" y="236" dominant-baseline="middle" font-size="11" fill="#525252">369 B gzip</text>
+  <text x="440" y="274" text-anchor="middle" font-size="11" fill="#737373">esbuild bundle · browser · minified · gzip level 9</text>
+</svg>

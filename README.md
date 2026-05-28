@@ -10,22 +10,18 @@ Optimized for merging large batches (10+ objects) in a single pass — see [benc
 
 ## Why this exists
 
-At **[MOS](https://www.askmos.com)** (student financial aid / scholarships), search runs on **Algolia** with many parallel queries. The product surfaces curated scholarship collections per student profile — state grants, major-specific lists, GPA tiers, deadlines, and more.
+**deep-merge-many** started as in-app merge logic for a product that runs many parallel **Algolia** searches (one filter set per curated collection) and then combines facet and range metadata from every response.
 
-[`listSections`](https://github.com/Latnac/apistudentaid/blob/main/src/functions/explore_section/helpers/listSections.ts) builds dozens of `AidProgramCollection` entries, each with its own `searchBodyFilter` (e.g. `awardYears`, `type`, `nextDeadline`, profile facets). Those filters drive separate Algolia searches.
-
-When combining results from **multiple Algolia responses**, facet and range metadata (`filterFacet`, `filterRange`) must be merged so bucket counts reflect the **union** of what each query returned — numeric leaves use max; keys named `min` use min. That logic lived as `deepMergeFilters` in the MOS API ([`searchStudentAidProgram.ts`](https://github.com/Latnac/apistudentaid/blob/main/src/functions/aid/helpers/searchStudentAidProgram.ts), [`deepMergeFilters.ts`](https://github.com/Latnac/apistudentaid/blob/main/src/functions/aid/helpers/deepMergeFilters.ts)).
-
-**deep-merge-many** extracts that pattern into a small, dependency-free library you can reuse anywhere you need the same merge semantics at scale.
+When several queries return overlapping facet buckets or numeric bounds, the UI needs a single object: counts should reflect the **union** of what any query saw (numeric leaves use `Math.max`; keys named `min` use `Math.min`). That pattern was extracted into this small, dependency-free library so the same semantics are reusable anywhere you merge many plain objects at scale.
 
 ```mermaid
 flowchart LR
-  collections[Many search filters]
-  algolia[Parallel Algolia queries]
-  facets[filterFacet and filterRange per response]
+  filters[Many search filters]
+  queries[Parallel Algolia queries]
+  facets[Facet and range metadata per response]
   merge[deepMerge]
   ui[Unified facet UI]
-  collections --> algolia --> facets --> merge --> ui
+  filters --> queries --> facets --> merge --> ui
 ```
 
 ## Behavior
@@ -57,7 +53,7 @@ const merged = deepMerge([
 // }
 ```
 
-### Algolia facet / range merge (scholarship search)
+### Algolia facet / range merge
 
 After parallel Algolia queries, merge per-response facet counts into one object for the UI:
 
@@ -95,12 +91,16 @@ Multi-object merge throughput (5 → 100 nested objects) vs [@fastify/deepmerge]
 
 ![Benchmark: merge throughput vs number of objects](docs/benchmark.png)
 
+Bundle weight (each library’s merge entry point, esbuild-bundled for the browser, minified, gzip level 9):
+
+![Benchmark: bundled library size](docs/benchmark-size.png)
+
 ```bash
 pnpm bench
 open benchmark/chart.html
 ```
 
-Regenerates `benchmark/chart.html`, `docs/benchmark.svg`, and `docs/benchmark.png`.
+Regenerates `benchmark/chart.html`, `docs/benchmark.svg`, `docs/benchmark.png`, and `docs/benchmark-size.svg` / `.png`.
 
 ## License
 

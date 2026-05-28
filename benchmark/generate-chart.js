@@ -1,15 +1,12 @@
 const fs = require("fs");
 const path = require("path");
-
-const CHART_COLORS = [
-  { border: "#2563eb", fill: "rgba(37, 99, 235, 0.12)" },
-  { border: "#dc2626", fill: "rgba(220, 38, 38, 0.08)" },
-  { border: "#16a34a", fill: "rgba(22, 163, 74, 0.08)" },
-  { border: "#ca8a04", fill: "rgba(202, 138, 4, 0.08)" },
-  { border: "#9333ea", fill: "rgba(147, 51, 234, 0.08)" },
-];
-
-const OUR_SERIES_ID = "deepMergeMany";
+const { formatBytes } = require("./measure-size.js");
+const {
+  OUR_SERIES_ID,
+  colorForSeriesId,
+  borderColorForSeriesId,
+  orderLibrariesLikeSeries,
+} = require("./colors.js");
 
 /**
  * @param {{ id: string, label: string, data: { count: number, hz: number }[] }[]} series
@@ -51,12 +48,35 @@ function computeVsFastestRatios(series) {
 }
 
 /**
- * @param {{ meta: object, series: { id: string, label: string, data: { count: number, hz: number }[] }[] }} results
+ * @param {{ id: string, label: string, minified: number, gzip: number }[]} libraries
+ * @param {{ id: string }[]} series throughput series (defines stable colors per library)
+ */
+function bundleSizeChartData(libraries, series) {
+  const ordered = orderLibrariesLikeSeries(libraries, series);
+
+  return {
+    labels: ordered.map((l) => l.label),
+    ids: ordered.map((l) => l.id),
+    datasets: [
+      {
+        label: "Gzip (bundled)",
+        data: ordered.map((l) => l.gzip),
+        minified: ordered.map((l) => l.minified),
+        backgroundColor: ordered.map((l) => borderColorForSeriesId(l.id, series)),
+        borderColor: ordered.map((l) => borderColorForSeriesId(l.id, series)),
+        borderWidth: ordered.map((l) => (l.id === OUR_SERIES_ID ? 2 : 1)),
+      },
+    ],
+  };
+}
+
+/**
+ * @param {{ meta: object, series: { id: string, label: string, data: { count: number, hz: number }[] }[], bundleSize?: { libraries: { id: string, label: string, minified: number, gzip: number }[] } }} results
  */
 function generateChart(results) {
   const labels = results.series[0].data.map((d) => String(d.count));
-  const datasets = results.series.map((series, i) => {
-    const color = CHART_COLORS[i % CHART_COLORS.length];
+  const datasets = results.series.map((series) => {
+    const color = colorForSeriesId(series.id, results.series);
     return {
       label: series.label,
       data: series.data.map((d) => Math.round(d.hz)),
@@ -73,6 +93,17 @@ function generateChart(results) {
   const ourDatasetIndex = results.series.findIndex((s) => s.id === OUR_SERIES_ID);
 
   const chartData = { labels, datasets, vsFastest, ourDatasetIndex };
+  const sizeChartData = results.bundleSize
+    ? bundleSizeChartData(results.bundleSize.libraries, results.series)
+    : null;
+
+  const sizeTableRows = results.bundleSize
+    ? orderLibrariesLikeSeries(results.bundleSize.libraries, results.series).map((lib) => {
+          const highlight = lib.id === OUR_SERIES_ID ? ' class="highlight"' : "";
+          return `<tr${highlight}><td>${lib.label}</td><td>${formatBytes(lib.minified)}</td><td>${formatBytes(lib.gzip)}</td></tr>`;
+        })
+        .join("")
+    : "";
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -91,7 +122,8 @@ function generateChart(results) {
       color: #171717;
     }
     main { max-width: 960px; margin: 0 auto; }
-    h1 { font-size: 1.25rem; font-weight: 600; margin: 0 0 0.5rem; }
+    h1, h2 { font-size: 1.25rem; font-weight: 600; margin: 0 0 0.5rem; }
+    h2 { margin-top: 2.5rem; }
     p.note {
       margin: 0 0 1.5rem;
       font-size: 0.875rem;
@@ -121,9 +153,16 @@ function generateChart(results) {
     thead th { background: #f5f5f5; font-weight: 600; }
     tr:last-child td { border-bottom: none; }
     tr.highlight td { font-weight: 600; background: #eff6ff; }
-    tr.ratio td { font-size: 0.75rem; color: #525252; font-style: italic; }
-    tr.ratio td.ahead { color: #15803d; }
-    tr.ratio td.behind { color: #b45309; }
+    td .cell-hz { display: block; }
+    td .cell-ratio {
+      display: block;
+      margin-top: 0.2rem;
+      font-size: 0.6875rem;
+      font-weight: 500;
+      font-style: italic;
+    }
+    td .cell-ratio.ahead { color: #15803d; }
+    td .cell-ratio.behind { color: #b45309; }
   </style>
 </head>
 <body>
@@ -131,12 +170,13 @@ function generateChart(results) {
     <h1>Multi-object merge benchmark</h1>
     <p class="note">
       Nested plain-object payloads. Libraries use different merge semantics;
-      this chart compares throughput only. Regenerate with <code>pnpm bench</code>.
+      Throughput and bundle size use different methodologies; see notes below.
+      Regenerate with <code>pnpm bench</code>.
     </p>
     <div class="chart-wrap">
       <canvas id="chart" aria-label="Line chart of merge throughput by object count"></canvas>
     </div>
-    <table>
+    <table aria-label="Throughput by object count">
       <thead>
         <tr>
           <th>Library</th>
@@ -146,28 +186,52 @@ function generateChart(results) {
       <tbody>
         ${results.series
           .map((series) => {
-            const highlight = series.id === "deepMergeMany" ? ' class="highlight"' : "";
+            const highlight = series.id === OUR_SERIES_ID ? ' class="highlight"' : "";
             const cells = series.data
-              .map((d) => {
+              .map((d, i) => {
                 const hz = d.hz;
                 const t = hz >= 1e6 ? `${(hz / 1e6).toFixed(2)}M` : hz >= 1e3 ? `${(hz / 1e3).toFixed(1)}k` : hz.toFixed(0);
+                if (series.id === OUR_SERIES_ID && vsFastest[i]) {
+                  const r = vsFastest[i];
+                  return `<td><span class="cell-hz">${t}</span><span class="cell-ratio ${r.ahead ? "ahead" : "behind"}">${r.short} vs ${r.compareLabel}</span></td>`;
+                }
                 return `<td>${t}</td>`;
               })
               .join("");
             return `<tr${highlight}><td>${series.label}</td>${cells}</tr>`;
           })
           .join("")}
-        <tr class="ratio">
-          <td>deep-merge-many vs fastest rival</td>
-          ${vsFastest
-            .map((r) => `<td class="${r.ahead ? "ahead" : "behind"}">${r.short} ${r.compareLabel}</td>`)
-            .join("")}
-        </tr>
       </tbody>
     </table>
+    ${
+      sizeChartData
+        ? `
+    <h2>Bundle size</h2>
+    <p class="note">
+      Each library entry point bundled with esbuild (browser, minified).
+      Gzip at level 9 — typical transfer size, not npm tarball weight.
+    </p>
+    <div class="chart-wrap" style="height: 280px;">
+      <canvas id="sizeChart" aria-label="Horizontal bar chart of bundled library size"></canvas>
+    </div>
+    <table aria-label="Bundled library size">
+      <thead>
+        <tr>
+          <th>Library</th>
+          <th>Minified</th>
+          <th>Gzip</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${sizeTableRows}
+      </tbody>
+    </table>`
+        : ""
+    }
   </main>
   <script>
     const chartData = ${JSON.stringify(chartData)};
+    const sizeChartData = ${JSON.stringify(sizeChartData)};
 
     function formatHz(hz) {
       if (hz >= 1e6) return (hz / 1e6).toFixed(2) + "M";
@@ -216,7 +280,7 @@ function generateChart(results) {
           },
           subtitle: {
             display: true,
-            text: "Source: pnpm bench · ${results.meta.startedAt.slice(0, 10)} · Node ${results.meta.node} · ops/sec (higher is faster) · green/red labels = deep-merge-many vs fastest rival",
+            text: "Source: pnpm bench · ${results.meta.startedAt.slice(0, 10)} · Node ${results.meta.node} · ops/sec (higher is faster)",
             padding: { bottom: 20 },
           },
           legend: {
@@ -257,6 +321,51 @@ function generateChart(results) {
     };
 
     new Chart(document.getElementById("chart"), config);
+
+    if (sizeChartData) {
+      new Chart(document.getElementById("sizeChart"), {
+        type: "bar",
+        data: sizeChartData,
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: "Bundled size (gzip, lower is smaller)",
+              font: { size: 16, weight: "600" },
+            },
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label(ctx) {
+                  const i = ctx.dataIndex;
+                  const gzip = ctx.parsed.x;
+                  const min = sizeChartData.datasets[0].minified[i];
+                  return [
+                    "gzip: " + gzip.toLocaleString() + " B",
+                    "minified: " + min.toLocaleString() + " B",
+                  ];
+                },
+              },
+            },
+          },
+          scales: {
+            x: {
+              title: { display: true, text: "Bytes (gzip)" },
+              beginAtZero: true,
+              ticks: {
+                callback(value) {
+                  if (value >= 1024) return (value / 1024).toFixed(1) + " KB";
+                  return value + " B";
+                },
+              },
+            },
+          },
+        },
+      });
+    }
   </script>
 </body>
 </html>
@@ -267,13 +376,77 @@ function generateChart(results) {
   return chartPath;
 }
 
-const SVG_COLORS = [
-  "#2563eb",
-  "#dc2626",
-  "#16a34a",
-  "#ca8a04",
-  "#9333ea",
-];
+/** @param {string} s */
+function escapeXml(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/**
+ * @param {{ id: string, label: string }[]} series
+ * @param {number} width
+ * @param {number} startY top of swatch row
+ */
+function renderSvgLegend(series, width, startY) {
+  const fontSize = 11;
+  const swatch = { w: 14, h: 3, gap: 6 };
+  const itemGap = 20;
+  const rowHeight = fontSize + 7;
+  const rowGap = rowHeight + 2;
+  const maxRowWidth = width - 48;
+
+  const items = series.map((s) => {
+    const textWidth = s.label.length * 6.2;
+    const itemWidth = swatch.w + swatch.gap + textWidth;
+    return {
+      label: s.label,
+      color: borderColorForSeriesId(s.id, series),
+      itemWidth,
+      bold: s.id === OUR_SERIES_ID,
+    };
+  });
+
+  /** @type {typeof items[]} */
+  const rows = [];
+  let row = [];
+  let rowWidth = 0;
+
+  for (const item of items) {
+    const extra = row.length ? itemGap : 0;
+    if (row.length && rowWidth + extra + item.itemWidth > maxRowWidth) {
+      rows.push(row);
+      row = [item];
+      rowWidth = item.itemWidth;
+    } else {
+      row.push(item);
+      rowWidth += extra + item.itemWidth;
+    }
+  }
+  if (row.length) rows.push(row);
+
+  const parts = [];
+  let y = startY;
+
+  for (const rowItems of rows) {
+    const totalWidth = rowItems.reduce(
+      (sum, item, i) => sum + item.itemWidth + (i > 0 ? itemGap : 0),
+      0,
+    );
+    let x = (width - totalWidth) / 2;
+
+    for (const item of rowItems) {
+      const centerY = y + rowHeight / 2;
+      const swatchY = centerY - swatch.h / 2;
+      parts.push(
+        `<rect x="${x}" y="${swatchY}" width="${swatch.w}" height="${swatch.h}" fill="${item.color}" rx="1"/>`,
+        `<text x="${x + swatch.w + swatch.gap}" y="${centerY}" dominant-baseline="middle" font-size="${fontSize}" fill="#171717" font-weight="${item.bold ? "600" : "400"}">${escapeXml(item.label)}</text>`,
+      );
+      x += item.itemWidth + itemGap;
+    }
+    y += rowGap;
+  }
+
+  return { svg: parts.join("\n  "), bottom: y };
+}
 
 /**
  * @param {{ meta: object, series: { id: string, label: string, data: { count: number, hz: number }[] }[] }} results
@@ -281,7 +454,9 @@ const SVG_COLORS = [
 function generateBenchmarkSvg(results) {
   const width = 880;
   const height = 420;
-  const pad = { top: 48, right: 24, bottom: 56, left: 72 };
+  const titleY = 24;
+  const legend = renderSvgLegend(results.series, width, 36);
+  const pad = { top: legend.bottom + 10, right: 24, bottom: 56, left: 72 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
 
@@ -309,29 +484,19 @@ function generateBenchmarkSvg(results) {
     .join("");
 
   const paths = results.series
-    .map((series, si) => {
-      const color = SVG_COLORS[si % SVG_COLORS.length];
+    .map((series) => {
+      const color = borderColorForSeriesId(series.id, results.series);
       const strokeWidth = series.id === OUR_SERIES_ID ? 3 : 2;
       const points = series.data.map((d, i) => `${xAt(i)},${yAt(d.hz)}`).join(" ");
       return `<polyline fill="none" stroke="${color}" stroke-width="${strokeWidth}" points="${points}"/>`;
     })
     .join("");
 
-  const legend = results.series
-    .map((series, si) => {
-      const color = SVG_COLORS[si % SVG_COLORS.length];
-      const x = pad.left + si * 160;
-      const y = 20;
-      return `<rect x="${x}" y="${y - 8}" width="12" height="3" fill="${color}"/>
-        <text x="${x + 18}" y="${y}" font-size="12" fill="#171717">${series.label}</text>`;
-    })
-    .join("");
-
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
   <rect width="100%" height="100%" fill="#fafafa"/>
-  <text x="${width / 2}" y="28" text-anchor="middle" font-size="16" font-weight="600" fill="#171717">Merge throughput vs number of objects</text>
-  ${legend}
+  <text x="${width / 2}" y="${titleY}" text-anchor="middle" font-size="16" font-weight="600" fill="#171717">Merge throughput vs number of objects</text>
+  ${legend.svg}
   ${gridLines}
   ${paths}
   ${xLabels}
@@ -346,4 +511,61 @@ function generateBenchmarkSvg(results) {
   return svgPath;
 }
 
-module.exports = { generateChart, generateBenchmarkSvg, computeVsFastestRatios };
+/**
+ * @param {{ bundleSize: { libraries: { id: string, label: string, minified: number, gzip: number }[] } }} results
+ */
+function generateBundleSizeSvg(results) {
+  if (!results.bundleSize) {
+    throw new Error("results.bundleSize is required for generateBundleSizeSvg");
+  }
+
+  const width = 880;
+  const libraries = orderLibrariesLikeSeries(results.bundleSize.libraries, results.series);
+  const rowHeight = 36;
+  const legend = renderSvgLegend(results.series, width, 36);
+  const pad = { top: legend.bottom + 10, right: 80, bottom: 40, left: 200 };
+  const plotW = width - pad.left - pad.right;
+  const plotH = libraries.length * rowHeight;
+  const height = pad.top + plotH + pad.bottom;
+  const maxGzip = Math.max(...libraries.map((l) => l.gzip));
+
+  const bars = libraries
+    .map((lib, i) => {
+      const y = pad.top + i * rowHeight + 8;
+      const barW = (lib.gzip / maxGzip) * plotW;
+      const color = borderColorForSeriesId(lib.id, results.series);
+      const strokeWidth = lib.id === OUR_SERIES_ID ? 2 : 0;
+      const labelX = pad.left - 10;
+      const barH = 18;
+      const barY = y + (rowHeight - barH) / 2;
+      const centerY = barY + barH / 2;
+      return `<text x="${labelX}" y="${centerY}" text-anchor="end" dominant-baseline="middle" font-size="12" fill="#171717" font-weight="${lib.id === OUR_SERIES_ID ? "600" : "400"}">${escapeXml(lib.label)}</text>
+        <rect x="${pad.left}" y="${barY}" width="${barW.toFixed(1)}" height="${barH}" fill="${color}" rx="2" stroke="${color}" stroke-width="${strokeWidth}"/>
+        <text x="${pad.left + barW + 6}" y="${centerY}" dominant-baseline="middle" font-size="11" fill="#525252">${formatBytes(lib.gzip)} gzip</text>`;
+    })
+    .join("");
+
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
+  <rect width="100%" height="100%" fill="#fafafa"/>
+  <text x="${width / 2}" y="24" text-anchor="middle" font-size="16" font-weight="600" fill="#171717">Bundled library size (gzip)</text>
+  ${legend.svg}
+  ${bars}
+  <text x="${width / 2}" y="${height - 12}" text-anchor="middle" font-size="11" fill="#737373">esbuild bundle · browser · minified · gzip level 9</text>
+</svg>`;
+
+  const docsDir = path.join(__dirname, "..", "docs");
+  fs.mkdirSync(docsDir, { recursive: true });
+  const svgPath = path.join(docsDir, "benchmark-size.svg");
+  fs.writeFileSync(svgPath, svg);
+  return svgPath;
+}
+
+module.exports = {
+  generateChart,
+  generateBenchmarkSvg,
+  generateBundleSizeSvg,
+  computeVsFastestRatios,
+  renderSvgLegend,
+  bundleSizeChartData,
+};
