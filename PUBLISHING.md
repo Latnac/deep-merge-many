@@ -2,8 +2,23 @@
 
 Releases are automated on **push to `main`**. CI runs tests, then when safeguards pass it:
 
-1. Publishes to **npm** (Trusted Publishing / OIDC — no `NPM_TOKEN`)
+1. Publishes to **[npmjs.com](https://www.npmjs.com/)** (`registry.npmjs.org`) — Trusted Publishing / OIDC, no `NPM_TOKEN`
 2. Creates git tag **`v{version}`** and a **GitHub Release** with generated notes
+
+## Which registry? (important)
+
+| Registry | URL | Our setup |
+|----------|-----|-----------|
+| **Public npm** (what we use) | `https://registry.npmjs.org` | `npm install deep-merge-many` |
+| **GitHub Packages** | `https://npm.pkg.github.com` | Not used — requires `@scope/name` and different auth |
+
+The French doc [Utilisation du registre npm (GitHub Packages)](https://docs.github.com/fr/packages/working-with-a-github-packages-registry/working-with-the-npm-registry) describes **GitHub Packages**, not the public npm registry. Do **not** point `publishConfig.registry` at `npm.pkg.github.com` unless you intentionally want installs from GitHub Packages only.
+
+Our workflow follows GitHub’s guide for **npmjs.org**:
+
+[Publishing Node.js packages → Publishing packages to the npm registry](https://docs.github.com/en/actions/publishing-packages/publishing-nodejs-packages#publishing-packages-to-the-npm-registry)
+
+plus [npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers) (OIDC instead of `NPM_TOKEN`).
 
 ## Safeguards (automated)
 
@@ -48,24 +63,60 @@ Do **not** push version tags manually — CI creates `v1.0.1` etc. after a succe
 
 No `NPM_TOKEN` repository secret is needed.
 
-### npm Trusted Publishing
+### First release (manual — npm has no “create package” button)
 
-1. Account at [npmjs.com](https://www.npmjs.com/) with **2FA** enabled.
-2. Package **deep-merge-many** → **Settings** → **Trusted publishing** (or account-level **Publishing** → **Trusted publishers** before the first publish).
-3. Add **GitHub Actions** publisher:
-   - **Repository:** `Latnac/deep-merge-many`
+npm does **not** let you register an empty package or configure Trusted Publishing **before** the first publish. Your profile shows **0 packages** until something is published once. That is normal.
+
+**Step 1 — Publish `1.0.1` from your machine** (one time):
+
+```bash
+cd /path/to/deep-merge-many
+pnpm install
+pnpm test
+pnpm run build
+npm login          # npmjs.com account with 2FA
+npm publish --access public
+```
+
+Confirm: [npmjs.com/package/deep-merge-many](https://www.npmjs.com/package/deep-merge-many) loads and your profile shows **1 package**.
+
+**Step 2 — Enable Trusted Publishing** (only after step 1):
+
+1. Open **[npmjs.com/package/deep-merge-many](https://www.npmjs.com/package/deep-merge-many)** (you must be logged in as the owner).
+2. Tab **Settings** (or go directly to [package access/settings](https://www.npmjs.com/package/deep-merge-many/access)).
+3. Section **Trusted publishing** → **GitHub Actions**.
+4. Set **exactly** (case-sensitive):
+   - **Organization or user:** `Latnac`
+   - **Repository:** `deep-merge-many`
    - **Workflow filename:** `ci.yml`
    - **Environment:** leave empty
-4. Confirm the name is free: `npm view deep-merge-many` (404 until first publish).
+5. Save.
 
-Docs: [npm Trusted Publishers](https://docs.npmjs.com/trusted-publishers).
+**Step 3 — CI for later versions** (`1.0.2`, …):
 
-### First release
+```bash
+npm version patch
+git push origin main
+```
 
-Trusted Publishing must be configured **before** CI can publish. For a brand-new package you can either:
+CI will publish via OIDC; you do not need `NPM_TOKEN` after step 2.
 
-- Bump version, push to `main`, and let CI publish once Trusted Publishing is linked, or  
-- Publish once locally with 2FA (`pnpm publish --access public`), then use CI for all later versions.
+### npm Trusted Publishing (fixes OIDC 404 in CI)
+
+If CI fails with:
+
+```text
+ERR_PNPM_AUTH_TOKEN_EXCHANGE ... status code 404
+PUT .../deep-merge-many - Not found
+```
+
+the package usually **does not exist yet**, or **Trusted publishing** (step 2 above) is missing/wrong.
+
+`package.json` repository URL must match GitHub:
+
+`git+https://github.com/Latnac/deep-merge-many.git`
+
+Docs: [npm Trusted Publishers](https://docs.npmjs.com/trusted-publishers) · [first publish limitation](https://github.com/npm/cli/issues/8544).
 
 ## Manual publish (fallback)
 
@@ -100,3 +151,13 @@ GITHUB_EVENT_BEFORE="$(git rev-parse HEAD^)" GITHUB_SHA="$(git rev-parse HEAD)" 
 ```
 
 Without `GITHUB_OUTPUT`, the script prints to stdout and exits 0 (skip) or 1 (block).
+
+## Troubleshooting publish failures
+
+| Symptom | Likely cause | Fix |
+|--------|----------------|-----|
+| `ERR_PNPM_AUTH_TOKEN_EXCHANGE` / OIDC 404 | Trusted publisher not configured or typo in repo/workflow | Re-check npm trusted publisher: `Latnac`, `deep-merge-many`, `ci.yml` |
+| `PUT ... Not found` after OIDC warning | Same as above — publish ran without auth | Fix trusted publisher, re-run workflow |
+| Publish skipped | Version unchanged on push | `npm version patch` and push |
+| `Version already published` | That version is on npm | Bump to next version |
+| Release step failed | Workflow permissions | GitHub → Actions → **Read and write** |

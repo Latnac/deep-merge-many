@@ -29,18 +29,20 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      id-token: write
+      contents: write # GitHub Release + tag
+      id-token: write # npm Trusted Publishing (OIDC) — see publishing-nodejs-packages
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: pnpm/action-setup@v4
+      # https://docs.github.com/en/actions/publishing-packages/publishing-nodejs-packages#publishing-packages-to-the-npm-registry
+      # (not GitHub Packages / npm.pkg.github.com — see PUBLISHING.md)
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "22.14"
           cache: pnpm
-          registry-url: https://registry.npmjs.org
+          registry-url: https://registry.npmjs.org/
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
       - run: pnpm run build
@@ -52,7 +54,8 @@ jobs:
         run: node scripts/check-npm-publish.mjs
       - name: Publish to npm
         if: steps.publish.outputs.should_publish == 'true'
-        run: pnpm publish --access public --no-git-checks --provenance
+        run: npm publish --provenance --access public
+        # No NODE_AUTH_TOKEN: npm Trusted Publishing exchanges the GitHub OIDC token
       - name: Create GitHub tag and release
         if: steps.publish.outputs.should_publish == 'true'
         env:
