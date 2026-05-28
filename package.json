@@ -1,0 +1,37 @@
+{
+  "name": "deep-merge-filters",
+  "version": "1.0.0",
+  "description": "Deep-merge search filter objects: nested objects recurse, min/max keys aggregate sensibly.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "jest",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "keywords": [
+    "merge",
+    "filters",
+    "facets",
+    "deep-merge"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/lodash": "^4.17.4",
+    "@types/node": "^20.14.2",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.3",
+    "typescript": "^5.5.4"
+  }
+}
