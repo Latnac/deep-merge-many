@@ -21,7 +21,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Latnac/deep-merge-many.git"
+    "url": "https://github.com/Latnac/deep-merge-many.git"
   },
   "bugs": "https://github.com/Latnac/deep-merge-many/issues",
   "homepage": "https://github.com/Latnac/deep-merge-many#readme",

@@ -85,11 +85,12 @@ Confirm: [npmjs.com/package/deep-merge-many](https://www.npmjs.com/package/deep-
 1. Open **[npmjs.com/package/deep-merge-many](https://www.npmjs.com/package/deep-merge-many)** (you must be logged in as the owner).
 2. Tab **Settings** (or go directly to [package access/settings](https://www.npmjs.com/package/deep-merge-many/access)).
 3. Section **Trusted publishing** → **GitHub Actions**.
-4. Set **exactly** (case-sensitive):
-   - **Organization or user:** `Latnac`
+4. Set **exactly** (case-sensitive — must match GitHub, not npm username):
+   - **Organization or user:** `Latnac` (GitHub owner login, **not** `latnac` from npm)
    - **Repository:** `deep-merge-many`
    - **Workflow filename:** `ci.yml`
    - **Environment:** leave empty
+   - **Allowed actions:** `npm publish` only
 5. Save.
 
 **Step 3 — CI for later versions** (`1.0.2`, …):
@@ -157,7 +158,8 @@ Without `GITHUB_OUTPUT`, the script prints to stdout and exits 0 (skip) or 1 (bl
 | Symptom | Likely cause | Fix |
 |--------|----------------|-----|
 | `ERR_PNPM_AUTH_TOKEN_EXCHANGE` / OIDC 404 | Trusted publisher not configured or typo in repo/workflow | Re-check npm trusted publisher: `Latnac`, `deep-merge-many`, `ci.yml` |
-| `PUT ... Not found` after OIDC warning | Same as above — publish ran without auth | Fix trusted publisher, re-run workflow |
+| `PUT ... Not found` but provenance signed | Often **old npm in CI** or wrong trusted publisher user | CI upgrades npm to 11.6.2+; use `Latnac` not `latnac` on npm |
+| `PUT ... Not found` after OIDC warning | Trusted publisher mismatch | Fix trusted publisher, re-run workflow |
 | Publish skipped | Version unchanged on push | `npm version patch` and push |
 | `Version already published` | That version is on npm | Bump to next version |
 | Release step failed | Workflow permissions | GitHub → Actions → **Read and write** |

@@ -52,10 +52,16 @@ jobs:
           GITHUB_EVENT_BEFORE: ${{ github.event.before }}
           GITHUB_SHA: ${{ github.sha }}
         run: node scripts/check-npm-publish.mjs
+      # Trusted Publishing needs npm 11.5.1+; Node's bundled npm can be older (see npm/cli#9088)
+      - name: Upgrade npm for Trusted Publishing
+        if: steps.publish.outputs.should_publish == 'true'
+        run: npm install -g npm@11.6.2
       - name: Publish to npm
         if: steps.publish.outputs.should_publish == 'true'
-        run: npm publish --provenance --access public
-        # No NODE_AUTH_TOKEN: npm Trusted Publishing exchanges the GitHub OIDC token
+        run: |
+          echo "npm $(npm --version) · node $(node --version)"
+          echo "repo=${{ github.repository }} · workflow=${{ github.workflow_ref }}"
+          npm publish --provenance --access public
       - name: Create GitHub tag and release
         if: steps.publish.outputs.should_publish == 'true'
         env:
