@@ -57,7 +57,7 @@ Do **not** push version tags manually — CI creates `v1.0.1` etc. after a succe
 2. Set visibility to **Public** (Settings → General → Danger zone / Change visibility) so the package and releases are easy to discover.
 3. **Settings → Actions → General → Workflow permissions**: choose **Read and write permissions** (required for `gh release create` with the default `GITHUB_TOKEN`).
 4. Optional **About** metadata:
-   - **Description:** `Fast deep-merge for many plain objects — born from merging Algolia facet/range metadata across parallel search responses.`
+   - **Description:** `Fast deep-merge for many plain objects — born from unioning Algolia facets and facets_stats across parallel search responses.`
    - **Website:** `https://github.com/Latnac/deep-merge-many#readme`
    - **Topics:** `deep-merge`, `algolia`, `merge`, `typescript`, `performance`
 

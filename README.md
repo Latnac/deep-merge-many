@@ -10,18 +10,31 @@ Optimized for merging large batches (10+ objects) in a single pass — see [benc
 
 ## Why this exists
 
-**deep-merge-many** started as in-app merge logic for a product that runs many parallel **Algolia** searches (one filter set per curated collection) and then combines facet and range metadata from every response.
+**deep-merge-many** started as in-app merge logic for a product that filters search results by **per-user, per-item eligibility** on our side. We could not express that in a single Algolia query, so we ran **many searches in parallel** (different filter sets / curated collections), applied eligibility to the hits, and then had to present **one** facet panel for the combined result set.
 
-When several queries return overlapping facet buckets or numeric bounds, the UI needs a single object: counts should reflect the **union** of what any query saw (numeric leaves use `Math.max`; keys named `min` use `Math.min`). That pattern was extracted into this small, dependency-free library so the same semantics are reusable anywhere you merge many plain objects at scale.
+Each [Algolia search response](https://github.com/algolia/algoliasearch-client-javascript/blob/b9d89e9913a38f857514c66f8cc184240113bbcb/packages/algoliasearch/lite/model/baseSearchResponse.ts) includes:
+
+- **`facets`** — facet value counts (`{ [facetName]: { [value]: number } }`)
+- **`facets_stats`** — min / max (and related stats) for numeric facets (`{ [facetName]: FacetStats }`)
+
+After merging hits from several responses, the UI still needs a **union** of that metadata across every query that contributed results:
+
+| Field | Goal when combining responses |
+| --- | --- |
+| `facets` | For each facet value, keep the **highest** count seen in any response (a value visible in any query should count). |
+| `facets_stats` | Widen numeric ranges: **max** of each `max`, **min** of each `min` (and the same max rule for other numeric stat fields). |
+
+`deepMerge` encodes exactly that: numeric leaves use `Math.max`, except keys named `min` which use `Math.min`. Nested objects (facet names, then values or stat keys) are merged recursively. The helper was extracted into this small, dependency-free package so the same semantics are reusable anywhere you merge many plain objects at scale—not only Algolia.
 
 ```mermaid
 flowchart LR
-  filters[Many search filters]
-  queries[Parallel Algolia queries]
-  facets[Facet and range metadata per response]
+  eligibility[Per-user item eligibility]
+  filters[Many Algolia filter sets]
+  queries[Parallel search queries]
+  meta["facets + facets_stats per response"]
   merge[deepMerge]
   ui[Unified facet UI]
-  filters --> queries --> facets --> merge --> ui
+  eligibility --> filters --> queries --> meta --> merge --> ui
 ```
 
 ## Behavior
@@ -53,20 +66,36 @@ const merged = deepMerge([
 // }
 ```
 
-### Algolia facet / range merge
+### Algolia `facets` and `facets_stats`
 
-After parallel Algolia queries, merge per-response facet counts into one object for the UI:
+After parallel queries, merge the facet metadata from each response (omit `undefined` / empty objects if a query returned no facets):
 
 ```ts
 import { deepMerge } from "deep-merge-many";
+import type { BaseSearchResponse } from "algoliasearch/lite";
 
-const filterFacet = deepMerge(
-  responses.map((r) => r.filterFacet),
-) as Record<string, Record<string, number>>;
+const responses: BaseSearchResponse[] = /* parallel search results */;
 
-const filterRange = deepMerge(
-  responses.map((r) => r.filterRange),
-) as Record<string, Record<string, number>>;
+const facets = deepMerge(
+  responses.map((r) => r.facets).filter(Boolean),
+) as NonNullable<BaseSearchResponse["facets"]>;
+
+const facets_stats = deepMerge(
+  responses.map((r) => r.facets_stats).filter(Boolean),
+) as NonNullable<BaseSearchResponse["facets_stats"]>;
+```
+
+Example: two responses for the same `brand` facet — counts take the max per value; stats widen min/max across queries:
+
+```ts
+deepMerge([
+  { brand: { Nike: 10, Adidas: 3 }, price: { min: 20, max: 100, avg: 50 } },
+  { brand: { Nike: 4, Puma: 7 }, price: { min: 5, max: 200, avg: 80 } },
+]);
+// {
+//   brand: { Nike: 10, Adidas: 3, Puma: 7 },
+//   price: { min: 5, max: 200, avg: 80 },
+// }
 ```
 
 The export is `deepMerge` — one function, any number of input objects.
