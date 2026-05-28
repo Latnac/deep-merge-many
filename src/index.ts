@@ -1,1 +1,1 @@
-export { deepMergeFilters } from './deepMergeFilters';
+export { deepMerge } from "./deepMerge";

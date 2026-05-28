@@ -1,5 +1,6 @@
 node_modules/
 dist/
 coverage/
+benchmark/results.json
 *.log
 .DS_Store

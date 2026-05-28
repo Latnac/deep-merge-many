@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>deep-merge-many benchmark</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 2rem;
+      background: #fafafa;
+      color: #171717;
+    }
+    main { max-width: 960px; margin: 0 auto; }
+    h1 { font-size: 1.25rem; font-weight: 600; margin: 0 0 0.5rem; }
+    p.note {
+      margin: 0 0 1.5rem;
+      font-size: 0.875rem;
+      color: #525252;
+      line-height: 1.5;
+    }
+    .chart-wrap {
+      position: relative;
+      height: 420px;
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      padding: 1rem;
+    }
+    table {
+      width: 100%;
+      margin-top: 2rem;
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    th, td { padding: 0.5rem 0.75rem; text-align: right; border-bottom: 1px solid #f0f0f0; }
+    th:first-child, td:first-child { text-align: left; }
+    thead th { background: #f5f5f5; font-weight: 600; }
+    tr:last-child td { border-bottom: none; }
+    tr.highlight td { font-weight: 600; background: #eff6ff; }
+    tr.ratio td { font-size: 0.75rem; color: #525252; font-style: italic; }
+    tr.ratio td.ahead { color: #15803d; }
+    tr.ratio td.behind { color: #b45309; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Multi-object merge benchmark</h1>
+    <p class="note">
+      Nested plain-object payloads. Libraries use different merge semantics;
+      this chart compares throughput only. Regenerate with <code>pnpm bench</code>.
+    </p>
+    <div class="chart-wrap">
+      <canvas id="chart" aria-label="Line chart of merge throughput by object count"></canvas>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Library</th>
+          <th>5 objs</th><th>10 objs</th><th>25 objs</th><th>50 objs</th><th>100 objs</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="highlight"><td>deep-merge-many</td><td>94.8k</td><td>71.2k</td><td>40.1k</td><td>22.7k</td><td>12.4k</td></tr><tr><td>@fastify/deepmerge</td><td>101.7k</td><td>52.5k</td><td>21.1k</td><td>10.7k</td><td>5.2k</td></tr><tr><td>ts-deepmerge</td><td>43.9k</td><td>20.1k</td><td>7.9k</td><td>4.0k</td><td>2.0k</td></tr><tr><td>deepmerge</td><td>24.6k</td><td>11.5k</td><td>4.6k</td><td>2.3k</td><td>1.1k</td></tr><tr><td>deep-merge</td><td>82.0k</td><td>40.6k</td><td>16.4k</td><td>9.0k</td><td>4.5k</td></tr>
+        <tr class="ratio">
+          <td>deep-merge-many vs fastest</td>
+          <td class="behind">0.93× @fastify/deepmerge</td><td class="ahead">1.36× @fastify/deepmerge</td><td class="ahead">1.90× @fastify/deepmerge</td><td class="ahead">2.12× @fastify/deepmerge</td><td class="ahead">2.37× @fastify/deepmerge</td>
+        </tr>
+      </tbody>
+    </table>
+  </main>
+  <script>
+    const chartData = {"labels":["5","10","25","50","100"],"datasets":[{"label":"deep-merge-many","data":[94756,71205,40145,22653,12372],"borderColor":"#2563eb","backgroundColor":"rgba(37, 99, 235, 0.12)","borderWidth":3,"pointRadius":5,"tension":0.2,"fill":false},{"label":"@fastify/deepmerge","data":[101706,52503,21141,10661,5226],"borderColor":"#dc2626","backgroundColor":"rgba(220, 38, 38, 0.08)","borderWidth":2,"pointRadius":3,"tension":0.2,"fill":false},{"label":"ts-deepmerge","data":[43889,20112,7930,4044,2012],"borderColor":"#16a34a","backgroundColor":"rgba(22, 163, 74, 0.08)","borderWidth":2,"pointRadius":3,"tension":0.2,"fill":false},{"label":"deepmerge","data":[24617,11534,4591,2277,1132],"borderColor":"#ca8a04","backgroundColor":"rgba(202, 138, 4, 0.08)","borderWidth":2,"pointRadius":3,"tension":0.2,"fill":false},{"label":"deep-merge","data":[82028,40639,16402,9009,4493],"borderColor":"#9333ea","backgroundColor":"rgba(147, 51, 234, 0.08)","borderWidth":2,"pointRadius":3,"tension":0.2,"fill":false}],"vsFastest":[{"count":5,"ratio":0.9316602258392651,"ahead":false,"compareLabel":"@fastify/deepmerge","short":"0.93×","detail":"0.93× vs @fastify/deepmerge (behind)"},{"count":10,"ratio":1.356214707901222,"ahead":true,"compareLabel":"@fastify/deepmerge","short":"1.36×","detail":"1.36× vs @fastify/deepmerge (ahead)"},{"count":25,"ratio":1.898944431373345,"ahead":true,"compareLabel":"@fastify/deepmerge","short":"1.90×","detail":"1.90× vs @fastify/deepmerge (ahead)"},{"count":50,"ratio":2.124785877925465,"ahead":true,"compareLabel":"@fastify/deepmerge","short":"2.12×","detail":"2.12× vs @fastify/deepmerge (ahead)"},{"count":100,"ratio":2.3673035201097377,"ahead":true,"compareLabel":"@fastify/deepmerge","short":"2.37×","detail":"2.37× vs @fastify/deepmerge (ahead)"}],"ourDatasetIndex":0};
+
+    function formatHz(hz) {
+      if (hz >= 1e6) return (hz / 1e6).toFixed(2) + "M";
+      if (hz >= 1e3) return (hz / 1e3).toFixed(1) + "k";
+      return String(hz);
+    }
+
+    const ratioLabelPlugin = {
+      id: "ratioLabel",
+      afterDatasetsDraw(chart) {
+        const { vsFastest, ourDatasetIndex } = chart.config.data;
+        if (ourDatasetIndex < 0 || !vsFastest?.length) return;
+
+        const meta = chart.getDatasetMeta(ourDatasetIndex);
+        const ctx = chart.ctx;
+        ctx.save();
+        ctx.font = "600 10px system-ui, sans-serif";
+        ctx.textAlign = "center";
+
+        meta.data.forEach((point, i) => {
+          const r = vsFastest[i];
+          if (!r || point.skip) return;
+          const { x, y } = point.getProps(["x", "y"], true);
+          ctx.fillStyle = r.ahead ? "#15803d" : "#b45309";
+          ctx.fillText(r.short, x, y - 10);
+        });
+        ctx.restore();
+      },
+    };
+
+    const config = {
+      type: "line",
+      data: chartData,
+      plugins: [ratioLabelPlugin],
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        layout: { padding: { top: 24 } },
+        plugins: {
+          title: {
+            display: true,
+            text: "Merge throughput vs number of objects",
+            font: { size: 18, weight: "600" },
+            padding: { bottom: 8 },
+          },
+          subtitle: {
+            display: true,
+            text: "Source: pnpm bench · 2026-05-28 · Node v22.21.1 · ops/sec (higher is faster) · green/red labels = deep-merge-many vs fastest rival",
+            padding: { bottom: 20 },
+          },
+          legend: {
+            position: "bottom",
+            labels: { boxWidth: 12, padding: 16 },
+          },
+          tooltip: {
+            callbacks: {
+              label(ctx) {
+                return ctx.dataset.label + ": " + formatHz(ctx.parsed.y) + " ops/sec";
+              },
+              afterBody(items) {
+                if (!items.length || !chartData.vsFastest) return [];
+                const r = chartData.vsFastest[items[0].dataIndex];
+                return r ? ["", "deep-merge-many: " + r.detail] : [];
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            title: { display: true, text: "Number of objects merged" },
+            grid: { display: false },
+          },
+          y: {
+            title: { display: true, text: "Throughput (operations per second)" },
+            beginAtZero: true,
+            ticks: {
+              callback(value) {
+                if (value >= 1e6) return value / 1e6 + "M";
+                if (value >= 1e3) return value / 1e3 + "k";
+                return value;
+              },
+            },
+          },
+        },
+      },
+    };
+
+    new Chart(document.getElementById("chart"), config);
+  </script>
+</body>
+</html>
