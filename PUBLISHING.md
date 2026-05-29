@@ -143,7 +143,7 @@ gh release create v1.0.1 --generate-notes
 npm install deep-merge-many
 ```
 
-In a scratch project: `import { deepMerge } from "deep-merge-many"`.
+In a scratch project: `import { deepMergeMany } from "deep-merge-many"`.
 
 ## Local dry-run of publish checks
 

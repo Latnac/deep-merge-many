@@ -1,21 +1,21 @@
-import { deepMerge } from "./deepMerge";
+import { deepMergeMany } from "./deepMergeMany";
 
-describe("deepMerge", () => {
+describe("deepMergeMany", () => {
   it("should return the merging of empty array", () => {
     const sources: any = [];
-    const result = deepMerge(sources);
+    const result = deepMergeMany(sources);
     expect(result).toStrictEqual({});
   });
 
   it("should return the merging of undefined", () => {
     const sources: any = [undefined, undefined];
-    const result = deepMerge(sources);
+    const result = deepMergeMany(sources);
     expect(result).toStrictEqual({});
   });
 
   it("should return the merging of empty object", () => {
     const sources: any = [{}, {}];
-    const result = deepMerge(sources);
+    const result = deepMergeMany(sources);
     expect(result).toStrictEqual({});
   });
 
@@ -24,19 +24,19 @@ describe("deepMerge", () => {
       { nested: {}, limits: {} },
       { nested: {}, limits: {} },
     ];
-    const result = deepMerge(sources);
+    const result = deepMergeMany(sources);
     expect(result).toStrictEqual({ nested: {}, limits: {} });
   });
 
   it("should return the merging of empty object with undefined", () => {
     const sources: any = [{ nested: {}, limits: {} }, undefined];
-    const result = deepMerge(sources);
+    const result = deepMergeMany(sources);
     expect(result).toStrictEqual({ nested: {}, limits: {} });
   });
 
   it("should return the merging of object without values and empty object", () => {
     const sources: any = [{ nested: {}, limits: {} }, {}];
-    const result = deepMerge(sources);
+    const result = deepMergeMany(sources);
     expect(result).toStrictEqual({ nested: {}, limits: {} });
   });
 
@@ -45,7 +45,7 @@ describe("deepMerge", () => {
       { max: 1000, min: 1 },
       { max: 2000, min: 1000 },
     ];
-    const result = deepMerge(sources);
+    const result = deepMergeMany(sources);
     expect(result).toStrictEqual({ max: 2000, min: 1 });
   });
 
@@ -90,7 +90,7 @@ describe("deepMerge", () => {
         },
       },
     ];
-    const result = deepMerge(sources);
+    const result = deepMergeMany(sources);
     expect(result).toStrictEqual({
       nested: {
         scores: {
@@ -135,7 +135,7 @@ describe("deepMerge", () => {
       },
       {},
     ];
-    const result = deepMerge(sources);
+    const result = deepMergeMany(sources);
     expect(result).toStrictEqual({
       nested: {
         scores: {

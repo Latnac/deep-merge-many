@@ -19,7 +19,7 @@ function customMerge(array: (number | undefined)[], fct: (...values: number[]) =
  * Deep-merge multiple plain objects into one.
  * Nested objects are merged recursively; numeric leaves use max, except `min` which uses min.
  */
-export function deepMerge(objects: Record<string, unknown>[]): Record<string, unknown> {
+export function deepMergeMany(objects: Record<string, unknown>[]): Record<string, unknown> {
   const object = {};
   // Union keys from non-empty inputs only — skip undefined entries and {}.
   const keys = uniq([
@@ -35,7 +35,7 @@ export function deepMerge(objects: Record<string, unknown>[]): Record<string, un
         Object.assign(object, { [key]: {} });
       } else {
         Object.assign(object, {
-          [key]: deepMerge(objects.map((object) => object?.[key]) as Record<string, unknown>[]),
+          [key]: deepMergeMany(objects.map((object) => object?.[key]) as Record<string, unknown>[]),
         });
       }
     } else {

@@ -4,8 +4,8 @@ const path = require("path");
 /** @type {Record<string, string>} */
 const BUNDLE_ENTRY = {
   deepMergeMany: `
-    const { deepMerge } = require("./dist/index.js");
-    module.exports = deepMerge;
+    const { deepMergeMany } = require("./dist/index.js");
+    module.exports = deepMergeMany;
   `,
   fastify: `
     const fastifyDeepmerge = require("@fastify/deepmerge");

@@ -24,7 +24,7 @@ After merging hits from several responses, the UI still needs a **union** of tha
 | `facets` | For each facet value, keep the **highest** count seen in any response (a value visible in any query should count). |
 | `facets_stats` | Widen numeric ranges: **max** of each `max`, **min** of each `min` (and the same max rule for other numeric stat fields). |
 
-`deepMerge` encodes exactly that: numeric leaves use `Math.max`, except keys named `min` which use `Math.min`. Nested objects (facet names, then values or stat keys) are merged recursively. The helper was extracted into this small, dependency-free package so the same semantics are reusable anywhere you merge many plain objects at scale—not only Algolia.
+`deepMergeMany` encodes exactly that: numeric leaves use `Math.max`, except keys named `min` which use `Math.min`. Nested objects (facet names, then values or stat keys) are merged recursively. The helper was extracted into this small, dependency-free package so the same semantics are reusable anywhere you merge many plain objects at scale—not only Algolia.
 
 ```mermaid
 flowchart LR
@@ -32,7 +32,7 @@ flowchart LR
   filters[Many Algolia filter sets]
   queries[Parallel search queries]
   meta["facets + facets_stats per response"]
-  merge[deepMerge]
+  merge[deepMergeMany]
   ui[Unified facet UI]
   eligibility --> filters --> queries --> meta --> merge --> ui
 ```
@@ -53,9 +53,9 @@ npm install deep-merge-many
 ## Usage
 
 ```ts
-import { deepMerge } from "deep-merge-many";
+import { deepMergeMany } from "deep-merge-many";
 
-const merged = deepMerge([
+const merged = deepMergeMany([
   { bounds: { price: { min: 10, max: 100 } }, counts: { a: 3, b: 1 } },
   { bounds: { price: { min: 5, max: 200 } }, counts: { a: 1, b: 5 } },
   // …more pages or chunks
@@ -71,16 +71,16 @@ const merged = deepMerge([
 After parallel queries, merge the facet metadata from each response (omit `undefined` / empty objects if a query returned no facets):
 
 ```ts
-import { deepMerge } from "deep-merge-many";
+import { deepMergeMany } from "deep-merge-many";
 import type { BaseSearchResponse } from "algoliasearch/lite";
 
 const responses: BaseSearchResponse[] = /* parallel search results */;
 
-const facets = deepMerge(
+const facets = deepMergeMany(
   responses.map((r) => r.facets).filter(Boolean),
 ) as NonNullable<BaseSearchResponse["facets"]>;
 
-const facets_stats = deepMerge(
+const facets_stats = deepMergeMany(
   responses.map((r) => r.facets_stats).filter(Boolean),
 ) as NonNullable<BaseSearchResponse["facets_stats"]>;
 ```
@@ -88,7 +88,7 @@ const facets_stats = deepMerge(
 Example: two responses for the same `brand` facet — counts take the max per value; stats widen min/max across queries:
 
 ```ts
-deepMerge([
+deepMergeMany([
   { brand: { Nike: 10, Adidas: 3 }, price: { min: 20, max: 100, avg: 50 } },
   { brand: { Nike: 4, Puma: 7 }, price: { min: 5, max: 200, avg: 80 } },
 ]);
@@ -98,7 +98,7 @@ deepMerge([
 // }
 ```
 
-The export is `deepMerge` — one function, any number of input objects.
+The export is `deepMergeMany` — one function, any number of input objects.
 
 ## Development
 

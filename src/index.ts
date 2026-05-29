@@ -1,1 +1,1 @@
-export { deepMerge } from "./deepMerge";
+export { deepMergeMany } from "./deepMergeMany";

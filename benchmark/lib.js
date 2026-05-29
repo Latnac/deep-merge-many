@@ -2,7 +2,7 @@ const fastifyDeepmerge = require("@fastify/deepmerge");
 const classicDeepmerge = require("deepmerge");
 const createDeepMerge = require("deep-merge");
 const { merge: tsDeepmerge } = require("ts-deepmerge");
-const { deepMerge } = require("../dist/index.js");
+const { deepMergeMany } = require("../dist/index.js");
 
 const mergeAllFastify = fastifyDeepmerge({ all: true });
 const mergePairDeepMerge = createDeepMerge((_target, source) => source);
@@ -19,7 +19,7 @@ function mergeManyDeepMergeLib(objects) {
 
 /** @type {{ id: string, label: string, run: (objects: Record<string, unknown>[]) => unknown }[]} */
 const implementations = [
-  { id: "deepMergeMany", label: "deep-merge-many", run: (objects) => deepMerge(objects) },
+  { id: "deepMergeMany", label: "deep-merge-many", run: (objects) => deepMergeMany(objects) },
   { id: "fastify", label: "@fastify/deepmerge", run: (objects) => mergeAllFastify(...objects) },
   { id: "tsDeepmerge", label: "ts-deepmerge", run: (objects) => tsDeepmerge(...objects) },
   { id: "deepmerge", label: "deepmerge", run: mergeManyClassic },
