@@ -8,6 +8,8 @@ Deep-merge **many** plain objects in one call. Recurses into nested objects; com
 
 Optimized for merging large batches (10+ objects) in a single pass — see [benchmarks](#benchmarks).
 
+**Try it:** [Interactive demo](https://latnac.com/deep-merge-many/demo) — edit several JSON objects and see the merged result live.
+
 ## Why this exists
 
 **deep-merge-many** started as in-app merge logic for a product that filters search results by **per-user, per-item eligibility** on our side. We could not express that in a single Algolia query, so we ran **many searches in parallel** (different filter sets / curated collections), applied eligibility to the hits, and then had to present **one** facet panel for the combined result set.
