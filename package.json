@@ -1,6 +1,6 @@
 {
   "name": "deep-merge-many",
-  "version": "1.0.4",
+  "version": "2.0.0",
   "description": "Deep-merge many plain objects in one call — fast at scale, min/max on numeric leaves.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
